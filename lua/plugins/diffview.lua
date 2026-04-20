@@ -73,6 +73,9 @@ return {
     },
     keys = {
       { "<leader>gd", "<cmd>DiffviewOpen<cr>", desc = "Git Diff View" },
+      { "<leader>R", "<cmd>DiffviewOpen<cr>", desc = "Git Diff View" },
+      { "<D-S-r>", "<cmd>DiffviewOpen<cr>", desc = "Git Diff View" },
+      { "<D-R>", "<cmd>DiffviewOpen<cr>", desc = "Git Diff View" },
       { "<leader>gD", "<cmd>DiffviewClose<cr>", desc = "Close Git Diff View" },
     },
   },

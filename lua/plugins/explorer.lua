@@ -35,9 +35,11 @@ local function open_git_diff(state)
   end
 end
 
-return {
-  { import = "lazyvim.plugins.extras.editor.neo-tree" },
+local function show_neotree()
+  require("neo-tree.command").execute({ action = "show", source = "filesystem", position = "left", dir = LazyVim.root() })
+end
 
+return {
   {
     "folke/snacks.nvim",
     keys = {
@@ -50,9 +52,27 @@ return {
 
   {
     "nvim-neo-tree/neo-tree.nvim",
+    keys = {
+      { "<leader>e", false },
+      {
+        "<leader>E",
+        show_neotree,
+        desc = "Explorer NeoTree",
+      },
+      {
+        "<D-S-e>",
+        show_neotree,
+        desc = "Explorer NeoTree",
+      },
+      {
+        "<D-E>",
+        show_neotree,
+        desc = "Explorer NeoTree",
+      },
+    },
     opts = {
       close_if_last_window = false,
-      sources = { "filesystem", "buffers", "git_status" },
+      sources = { "filesystem", "git_status" },
       filesystem = {
         follow_current_file = { enabled = true },
       },
@@ -61,7 +81,6 @@ return {
         statusline = false,
         sources = {
           { source = "filesystem", display_name = " Files " },
-          { source = "buffers", display_name = " Buffers " },
           { source = "git_status", display_name = " Git " },
         },
       },
