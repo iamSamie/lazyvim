@@ -3,3 +3,13 @@
 -- Add any additional options here
 
 vim.g.lazyvim_explorer = "neo-tree"
+
+vim.opt.number = true
+vim.opt.relativenumber = false
+
+-- Avoid horizontal scrolling in regular buffers.
+vim.opt.wrap = true
+vim.opt.linebreak = true
+
+-- Keep more context visible before vertical scrolling starts.
+vim.opt.scrolloff = 20
