@@ -13,3 +13,6 @@ vim.opt.linebreak = true
 
 -- Keep more context visible before vertical scrolling starts.
 vim.opt.scrolloff = 20
+
+-- Always write a trailing newline at EOF.
+vim.opt.fixendofline = true

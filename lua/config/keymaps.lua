@@ -36,5 +36,19 @@ vim.keymap.set("n", "<C-w>", function()
   vim.api.nvim_buf_delete(current, { force = true })
 end, { desc = "Save and Close Buffer" })
 
+vim.keymap.set("n", "<D-C-c>p", function()
+  local file = vim.api.nvim_buf_get_name(0)
+  if file == "" then
+    vim.notify("No file path to copy", vim.log.levels.WARN)
+    return
+  end
+
+  local rel = vim.fs.relpath(file, LazyVim.root()) or vim.fn.fnamemodify(file, ":.")
+
+  vim.fn.setreg('+', rel)
+  vim.fn.setreg('*', rel)
+  vim.notify("Copied path: " .. rel)
+end, { desc = "Copy Relative File Path" })
+
 vim.keymap.set("n", "<D-/>", "gcc", { desc = "Comment Line", remap = true })
 vim.keymap.set("x", "<D-/>", "gc", { desc = "Comment Selection", remap = true })
