@@ -17,13 +17,17 @@ local function next_buffer(exclude)
 end
 
 vim.keymap.set("n", "<C-w>", function()
-  local ok, err = pcall(vim.cmd, "write")
-  if not ok then
-    vim.notify("Save failed: " .. tostring(err), vim.log.levels.WARN)
-    return
+  local current = vim.api.nvim_get_current_buf()
+  local has_changes = vim.bo[current].modified
+
+  if has_changes then
+    local ok, error_message = pcall(vim.cmd, "write")
+    if not ok then
+      vim.notify("Save failed: " .. tostring(error_message), vim.log.levels.WARN)
+      return
+    end
   end
 
-  local current = vim.api.nvim_get_current_buf()
   local target = next_buffer(current)
 
   if target then
@@ -34,7 +38,7 @@ vim.keymap.set("n", "<C-w>", function()
 
   vim.cmd("enew")
   vim.api.nvim_buf_delete(current, { force = true })
-end, { desc = "Save and Close Buffer" })
+end, { desc = "Close Buffer (Save if Modified)" })
 
 vim.keymap.set("n", "<D-C-c>p", function()
   local file = vim.api.nvim_buf_get_name(0)
