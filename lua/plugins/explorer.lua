@@ -35,6 +35,24 @@ local function open_git_diff(state)
   end
 end
 
+local function grep_in_directory(state)
+  local node = state.tree:get_node()
+
+  if not node then
+    vim.notify("No node selected", vim.log.levels.WARN)
+    return
+  end
+
+  if node.type ~= "directory" then
+    vim.notify("Select a directory in Neo-tree", vim.log.levels.WARN)
+    return
+  end
+
+  require("telescope.builtin").live_grep({
+    cwd = node.path,
+  })
+end
+
 local function show_neotree()
   require("neo-tree.command").execute({ action = "show", source = "filesystem", position = "left", dir = LazyVim.root() })
 end
@@ -100,6 +118,14 @@ return {
             ["<cr>"] = "open_git_diff",
             ["l"] = "open_git_diff",
           },
+        },
+      },
+      commands = {
+        grep_in_directory = grep_in_directory,
+      },
+      window = {
+        mappings = {
+          ["<leader>fd"] = "grep_in_directory",
         },
       },
     },
