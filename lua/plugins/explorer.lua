@@ -75,6 +75,10 @@ return {
       sources = { "filesystem", "git_status" },
       filesystem = {
         follow_current_file = { enabled = true },
+        filtered_items = {
+          hide_dotfiles = false,
+          hide_hidden = false,
+        },
       },
       source_selector = {
         winbar = true,

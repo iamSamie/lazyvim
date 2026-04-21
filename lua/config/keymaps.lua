@@ -45,8 +45,8 @@ vim.keymap.set("n", "<D-C-c>p", function()
 
   local rel = vim.fs.relpath(file, LazyVim.root()) or vim.fn.fnamemodify(file, ":.")
 
-  vim.fn.setreg('+', rel)
-  vim.fn.setreg('*', rel)
+  vim.fn.setreg("+", rel)
+  vim.fn.setreg("*", rel)
   vim.notify("Copied path: " .. rel)
 end, { desc = "Copy Relative File Path" })
 
