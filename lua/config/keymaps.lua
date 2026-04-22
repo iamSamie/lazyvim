@@ -2,9 +2,70 @@
 -- Default keymaps that are always set: https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua
 -- Add any additional keymaps here
 
+local function terminal_root_directory()
+  return vim.fn.fnameescape(LazyVim.root())
+end
+
+local function next_terminal_count()
+  local terminal_manager = require("toggleterm.terminal")
+  local terminal_list = terminal_manager.get_all(true)
+
+  for terminal_index, terminal in ipairs(terminal_list) do
+    if terminal_index ~= terminal.id then
+      return terminal_index
+    end
+  end
+
+  return #terminal_list + 1
+end
+
+local function toggle_terminal(terminal_count)
+  vim.cmd(terminal_count .. "ToggleTerm direction=horizontal dir=" .. terminal_root_directory())
+end
+
+local function create_terminal()
+  toggle_terminal(next_terminal_count())
+end
+
+local function toggle_all_terminals()
+  local terminal_manager = require("toggleterm.terminal")
+  local terminal_list = terminal_manager.get_all(true)
+
+  if #terminal_list == 0 then
+    toggle_terminal(1)
+    return
+  end
+
+  vim.cmd("ToggleTermToggleAll")
+end
+
 vim.keymap.set({ "n", "t" }, "<C-`>", function()
-  Snacks.terminal(nil, { cwd = LazyVim.root() })
-end, { desc = "Terminal (Root Dir)" })
+  toggle_all_terminals()
+end, { desc = "Toggle Terminal Section" })
+
+vim.keymap.set({ "n", "t" }, "<C-/>", function()
+  toggle_all_terminals()
+end, { desc = "Toggle Terminal Section" })
+
+vim.keymap.set({ "n", "t" }, "<leader>tt", function()
+  create_terminal()
+end, { desc = "New Terminal" })
+
+vim.keymap.set("n", "<leader>ts", function()
+  vim.cmd("TermSelect")
+end, { desc = "Select Terminal" })
+
+vim.keymap.set({ "n", "t" }, "<leader>t1", function()
+  toggle_terminal(1)
+end, { desc = "Terminal 1" })
+
+vim.keymap.set({ "n", "t" }, "<leader>t2", function()
+  toggle_terminal(2)
+end, { desc = "Terminal 2" })
+
+vim.keymap.set({ "n", "t" }, "<leader>t3", function()
+  toggle_terminal(3)
+end, { desc = "Terminal 3" })
 
 local function next_buffer(exclude)
   for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do

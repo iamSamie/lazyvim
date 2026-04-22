@@ -20,6 +20,18 @@ local function open_neotree()
   end)
 end
 
+local function wipe_regular_buffers()
+  for _, buffer_number in ipairs(vim.api.nvim_list_bufs()) do
+    if vim.api.nvim_buf_is_valid(buffer_number) and vim.bo[buffer_number].buflisted then
+      local buffer_options = vim.bo[buffer_number]
+
+      if buffer_options.buftype == "" then
+        pcall(vim.api.nvim_buf_delete, buffer_number, { force = true })
+      end
+    end
+  end
+end
+
 local function open_git_diff(state)
   local node = state.tree:get_node()
   local is_file = node and node.type == "file"
@@ -108,6 +120,10 @@ return {
       },
       window = {
         position = "left",
+        width = 40,
+        mappings = {
+          ["<leader>fd"] = "grep_in_directory",
+        },
       },
       git_status = {
         commands = {
@@ -123,11 +139,6 @@ return {
       commands = {
         grep_in_directory = grep_in_directory,
       },
-      window = {
-        mappings = {
-          ["<leader>fd"] = "grep_in_directory",
-        },
-      },
     },
   },
 
@@ -138,6 +149,7 @@ return {
       opts.no_restore_cmds = opts.no_restore_cmds or {}
 
       table.insert(opts.post_restore_cmds, open_neotree)
+      table.insert(opts.no_restore_cmds, wipe_regular_buffers)
       table.insert(opts.no_restore_cmds, open_neotree)
     end,
   },
