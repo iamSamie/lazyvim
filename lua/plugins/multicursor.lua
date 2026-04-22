@@ -18,8 +18,8 @@ return {
             method = multicursors_normal_mode.create_up,
             opts = { desc = "Add Cursor Up" },
           },
-          j = false,
-          k = false,
+          ["j"] = { method = false },
+          ["k"] = { method = false },
         },
       }
     end,
