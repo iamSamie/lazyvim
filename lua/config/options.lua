@@ -3,6 +3,7 @@
 -- Add any additional options here
 
 vim.g.lazyvim_explorer = "neo-tree"
+vim.g.autoformat = true
 
 vim.opt.number = true
 vim.opt.relativenumber = false

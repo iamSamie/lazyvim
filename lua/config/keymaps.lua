@@ -56,3 +56,6 @@ end, { desc = "Copy Relative File Path" })
 
 vim.keymap.set("n", "<D-/>", "gcc", { desc = "Comment Line", remap = true })
 vim.keymap.set("x", "<D-/>", "gc", { desc = "Comment Selection", remap = true })
+
+vim.keymap.set({ "n", "x" }, "<M-CR>", vim.lsp.buf.code_action, { desc = "Code Action" })
+vim.keymap.set("n", "<leader>sd", "<cmd>Telescope diagnostics<cr>", { desc = "Search Diagnostics" })
