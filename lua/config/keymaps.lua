@@ -56,6 +56,11 @@ end, { desc = "Copy Relative File Path" })
 
 vim.keymap.set("n", "<D-/>", "gcc", { desc = "Comment Line", remap = true })
 vim.keymap.set("x", "<D-/>", "gc", { desc = "Comment Selection", remap = true })
+vim.keymap.set("n", "<D-j>", "<cmd>move .+1<cr>==", { desc = "Move Line Down" })
+vim.keymap.set("n", "<D-k>", "<cmd>move .-2<cr>==", { desc = "Move Line Up" })
+vim.keymap.set("x", "<D-j>", ":move '>+1<cr>gv=gv", { desc = "Move Selection Down" })
+vim.keymap.set("x", "<D-k>", ":move '<-2<cr>gv=gv", { desc = "Move Selection Up" })
 
 vim.keymap.set({ "n", "x" }, "<M-CR>", vim.lsp.buf.code_action, { desc = "Code Action" })
+vim.keymap.set("n", "gt", vim.lsp.buf.type_definition, { desc = "Go to Type Definition" })
 vim.keymap.set("n", "<leader>sd", "<cmd>Telescope diagnostics<cr>", { desc = "Search Diagnostics" })
