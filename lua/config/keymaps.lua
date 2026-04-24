@@ -125,3 +125,4 @@ vim.keymap.set("x", "<D-k>", ":move '<-2<cr>gv=gv", { desc = "Move Selection Up"
 vim.keymap.set({ "n", "x" }, "<M-CR>", vim.lsp.buf.code_action, { desc = "Code Action" })
 vim.keymap.set("n", "gt", vim.lsp.buf.type_definition, { desc = "Go to Type Definition" })
 vim.keymap.set("n", "<leader>sd", "<cmd>Telescope diagnostics<cr>", { desc = "Search Diagnostics" })
+vim.keymap.set("n", "<leader>gm", "<cmd>DiffviewMergeConflicts<cr>", { desc = "Merge Conflicts View" })
