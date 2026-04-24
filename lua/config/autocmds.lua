@@ -130,7 +130,7 @@ local function get_git_dir(git_root)
     return nil
   end
 
-  if vim.fs.isabsolute(git_dir) then
+  if vim.startswith(git_dir, "/") then
     return vim.fs.normalize(git_dir)
   end
 
