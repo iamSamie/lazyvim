@@ -27,6 +27,7 @@ return {
     event = "BufReadPost",
     dependencies = {
       "lewis6991/gitsigns.nvim",
+      "kevinhwang91/nvim-hlslens",
     },
     opts = {
       hide_if_all_visible = false,

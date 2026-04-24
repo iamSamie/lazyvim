@@ -55,6 +55,15 @@ return {
       {
         "<leader>fr",
         function()
+          require("telescope.builtin").oldfiles({
+            cwd = vim.uv.cwd(),
+          })
+        end,
+        desc = "Recent Files (cwd)",
+      },
+      {
+        "<leader>fR",
+        function()
           require("telescope.builtin").oldfiles()
         end,
         desc = "Recent Files",
