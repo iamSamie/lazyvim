@@ -109,14 +109,41 @@ local function run_git_command(git_root, arguments)
   return vim.trim(git_result.stdout)
 end
 
-local function get_current_git_root()
-  local current_buffer_name = vim.api.nvim_buf_get_name(0)
+local function get_buffer_working_directory(bufnr)
+  local buffer_name = vim.api.nvim_buf_get_name(bufnr)
+
+  if not vim.startswith(buffer_name, "term://") then
+    return nil
+  end
+
+  local terminal_working_directory = buffer_name:match("^term://(.-)//%d+:")
+
+  if not terminal_working_directory or terminal_working_directory == "" then
+    return nil
+  end
+
+  return vim.fs.normalize(terminal_working_directory)
+end
+
+local function get_current_git_root(bufnr)
+  local target_buffer_number = bufnr or 0
+  local current_buffer_name = vim.api.nvim_buf_get_name(target_buffer_number)
 
   if current_buffer_name ~= "" then
     local buffer_git_root = vim.fs.root(current_buffer_name, ".git")
 
     if buffer_git_root then
       return buffer_git_root
+    end
+  end
+
+  local buffer_working_directory = get_buffer_working_directory(target_buffer_number)
+
+  if buffer_working_directory then
+    local terminal_git_root = vim.fs.root(buffer_working_directory, ".git")
+
+    if terminal_git_root then
+      return terminal_git_root
     end
   end
 
@@ -157,14 +184,14 @@ local function get_conflicted_files(git_root)
   return vim.split(conflicted_files, "\n", { trimempty = true })
 end
 
-local function maybe_open_merge_diffview()
+local function maybe_open_merge_diffview(bufnr)
   local current_filetype = vim.bo.filetype
 
   if current_filetype:match("^Diffview") then
     return
   end
 
-  local git_root = get_current_git_root()
+  local git_root = get_current_git_root(bufnr)
 
   if not git_root then
     last_merge_conflict_signature = nil
@@ -201,7 +228,7 @@ end
 vim.api.nvim_create_user_command("DiffviewMergeConflicts", function()
   last_merge_conflict_signature = nil
 
-  local git_root = get_current_git_root()
+  local git_root = get_current_git_root(0)
   local git_dir = git_root and get_git_dir(git_root) or nil
   local conflicted_files = git_root and get_conflicted_files(git_root) or {}
 
@@ -217,10 +244,10 @@ end, {
   desc = "Open Diffview for current merge or rebase conflicts",
 })
 
-vim.api.nvim_create_autocmd({ "VimEnter", "FocusGained" }, {
+vim.api.nvim_create_autocmd({ "VimEnter", "FocusGained", "TermClose" }, {
   group = merge_diffview_group,
   desc = "Open Diffview for merge and rebase conflicts",
-  callback = function()
-    maybe_open_merge_diffview()
+  callback = function(args)
+    maybe_open_merge_diffview(args.buf)
   end,
 })
