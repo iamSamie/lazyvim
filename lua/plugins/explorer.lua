@@ -6,12 +6,16 @@ local function open_neotree()
     end
 
     local current_win = vim.api.nvim_get_current_win()
+    local current_buffer = vim.api.nvim_get_current_buf()
+    local current_buffer_name = vim.api.nvim_buf_get_name(current_buffer)
+    local should_reveal_current_file = current_buffer_name == "" or vim.uv.fs_stat(current_buffer_name) ~= nil
+
     command.execute({
       action = "show",
       source = "filesystem",
       position = "left",
       dir = LazyVim.root(),
-      reveal = true,
+      reveal = should_reveal_current_file,
     })
 
     if vim.api.nvim_win_is_valid(current_win) then
@@ -93,6 +97,103 @@ local function wipe_regular_buffers()
   end
 end
 
+local function wipe_missing_file_buffers()
+  for _, buffer_number in ipairs(vim.api.nvim_list_bufs()) do
+    if vim.api.nvim_buf_is_valid(buffer_number) and vim.bo[buffer_number].buflisted then
+      local buffer_options = vim.bo[buffer_number]
+      local buffer_name = vim.api.nvim_buf_get_name(buffer_number)
+
+      if buffer_options.buftype == "" and buffer_name ~= "" and vim.uv.fs_stat(buffer_name) == nil then
+        pcall(vim.api.nvim_buf_delete, buffer_number, { force = true })
+      end
+    end
+  end
+end
+
+local is_session_restoring = false
+
+local function has_listed_regular_file_buffer()
+  for _, buffer_number in ipairs(vim.api.nvim_list_bufs()) do
+    if vim.api.nvim_buf_is_valid(buffer_number) and vim.bo[buffer_number].buflisted then
+      local buffer_options = vim.bo[buffer_number]
+      local buffer_name = vim.api.nvim_buf_get_name(buffer_number)
+
+      if buffer_options.buftype == "" and buffer_name ~= "" and vim.uv.fs_stat(buffer_name) ~= nil then
+        return true
+      end
+    end
+  end
+
+  return false
+end
+
+local function get_dashboard_target_window()
+  local current_window = vim.api.nvim_get_current_win()
+  local current_buffer = vim.api.nvim_win_get_buf(current_window)
+
+  if vim.bo[current_buffer].filetype ~= "neo-tree" then
+    return current_window
+  end
+
+  for _, window_number in ipairs(vim.api.nvim_list_wins()) do
+    local window_buffer = vim.api.nvim_win_get_buf(window_number)
+    local is_floating_window = vim.api.nvim_win_get_config(window_number).relative ~= ""
+
+    if not is_floating_window and vim.bo[window_buffer].filetype ~= "neo-tree" then
+      return window_number
+    end
+  end
+
+  return nil
+end
+
+local function open_dashboard_if_no_files(delay)
+  local dashboard_delay = type(delay) == "number" and delay or 50
+
+  vim.defer_fn(function()
+    if is_session_restoring then
+      return
+    end
+
+    if has_listed_regular_file_buffer() then
+      return
+    end
+
+    local dashboard_ok, dashboard = pcall(require, "snacks.dashboard")
+
+    if not dashboard_ok then
+      return
+    end
+
+    local target_window = get_dashboard_target_window()
+
+    if not target_window then
+      return
+    end
+
+    local current_buffer = vim.api.nvim_win_get_buf(target_window)
+
+    if vim.bo[current_buffer].filetype == "snacks_dashboard" then
+      return
+    end
+
+    if vim.api.nvim_buf_get_name(current_buffer) ~= "" or vim.bo[current_buffer].modified then
+      return
+    end
+
+    local dashboard_buffer = vim.api.nvim_create_buf(false, true)
+    pcall(dashboard.open, { buf = dashboard_buffer, win = target_window })
+  end, dashboard_delay)
+end
+
+local function finish_session_restore()
+  vim.defer_fn(function()
+    is_session_restoring = false
+    wipe_missing_file_buffers()
+    open_dashboard_if_no_files(100)
+  end, 300)
+end
+
 local function open_git_diff(state)
   local node = state.tree:get_node()
   local is_file = node and node.type == "file"
@@ -133,6 +234,27 @@ end
 return {
   {
     "folke/snacks.nvim",
+    init = function()
+      vim.api.nvim_create_autocmd({ "BufDelete", "BufWipeout" }, {
+        group = vim.api.nvim_create_augroup("user_open_dashboard_when_no_files", { clear = true }),
+        desc = "Open dashboard when the last file buffer is closed",
+        callback = function(args)
+          if is_session_restoring then
+            return
+          end
+
+          local filetype_success, deleted_filetype = pcall(function()
+            return vim.bo[args.buf].filetype
+          end)
+
+          if filetype_success and (deleted_filetype == "snacks_dashboard" or deleted_filetype == "neo-tree") then
+            return
+          end
+
+          open_dashboard_if_no_files()
+        end,
+      })
+    end,
     keys = {
       { "<leader>fe", false },
       { "<leader>fE", false },
@@ -222,11 +344,17 @@ return {
   {
     "rmagatti/auto-session",
     opts = function(_, opts)
+      opts.pre_restore_cmds = opts.pre_restore_cmds or {}
       opts.post_restore_cmds = opts.post_restore_cmds or {}
       opts.no_restore_cmds = opts.no_restore_cmds or {}
 
+      table.insert(opts.pre_restore_cmds, function()
+        is_session_restoring = true
+      end)
+      table.insert(opts.post_restore_cmds, finish_session_restore)
       table.insert(opts.post_restore_cmds, open_neotree)
       table.insert(opts.no_restore_cmds, wipe_regular_buffers)
+      table.insert(opts.no_restore_cmds, open_dashboard_if_no_files)
       table.insert(opts.no_restore_cmds, open_neotree)
     end,
   },
