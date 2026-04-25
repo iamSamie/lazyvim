@@ -1,11 +1,16 @@
 return {
   {
     "nvim-mini/mini.icons",
+    enabled = false,
+  },
+  {
+    "DaikyXendo/nvim-material-icon",
+    name = "nvim-web-devicons",
     lazy = false,
     priority = 1000,
-    config = function()
-      require("mini.icons").setup({ style = "glyph" })
-      MiniIcons.mock_nvim_web_devicons()
-    end,
+    opts = {
+      color_icons = true,
+      default = true,
+    },
   },
 }

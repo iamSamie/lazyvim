@@ -20,6 +20,67 @@ local function open_neotree()
   end)
 end
 
+local folder_icon_definitions = {
+  [".docker"] = { icon = "", color = "#33B5E5", name = "Docker" },
+  [".git"] = { icon = "", color = "#F14E32", name = "Git" },
+  [".gitlab-ci"] = { icon = "", color = "#FC6D26", name = "GitLab" },
+  [".husky"] = { icon = "󰜫", color = "#C8CCD4", name = "Husky" },
+  [".idea"] = { icon = "", color = "#B86AD9", name = "Idea" },
+  [".settings"] = { icon = "", color = "#66B8E8", name = "Settings" },
+  actions = { icon = "󰒓", color = "#B86AD9", name = "Actions" },
+  app = { icon = "󰏗", color = "#D96A7D", name = "App" },
+  constants = { icon = "󰏿", color = "#66B8E8", name = "Constants" },
+  dist = { icon = "󰉥", color = "#D96A7D", name = "Dist" },
+  docs = { icon = "󰈙", color = "#66B8E8", name = "Docs" },
+  entities = { icon = "󰆧", color = "#56B6C2", name = "Entities" },
+  features = { icon = "󰙅", color = "#8AC76A", name = "Features" },
+  helpers = { icon = "󰘦", color = "#D8D85C", name = "Helpers" },
+  i18n = { icon = "󰗊", color = "#66B8E8", name = "I18n" },
+  model = { icon = "󰆼", color = "#56B6C2", name = "Model" },
+  node_modules = { icon = "", color = "#8AC76A", name = "NodeModules" },
+  pages = { icon = "󰈔", color = "#66B8E8", name = "Pages" },
+  projects = { icon = "󰲋", color = "#56B6C2", name = "Projects" },
+  rules = { icon = "󰁨", color = "#D96A7D", name = "Rules" },
+  shared = { icon = "󰒗", color = "#D8A45C", name = "Shared" },
+  src = { icon = "󰉋", color = "#5FA8FF", name = "Src" },
+  widgets = { icon = "󰕮", color = "#B86AD9", name = "Widgets" },
+}
+
+local function set_folder_icon_highlights()
+  for _, folder_icon_definition in pairs(folder_icon_definitions) do
+    vim.api.nvim_set_hl(0, "NeoTreeMaterialFolder" .. folder_icon_definition.name, {
+      fg = folder_icon_definition.color,
+      bg = "NONE",
+    })
+  end
+end
+
+local function neo_tree_icon_provider(icon, node)
+  if node.type == "directory" then
+    local folder_icon_definition = folder_icon_definitions[node.name]
+
+    if folder_icon_definition then
+      icon.text = folder_icon_definition.icon
+      icon.highlight = "NeoTreeMaterialFolder" .. folder_icon_definition.name
+    end
+
+    return icon
+  end
+
+  if node.type == "file" or node.type == "terminal" then
+    local has_devicons, devicons = pcall(require, "nvim-web-devicons")
+    local name = node.type == "terminal" and "terminal" or node.name
+
+    if has_devicons then
+      local devicon, highlight = devicons.get_icon(name)
+      icon.text = devicon or icon.text
+      icon.highlight = highlight or icon.highlight
+    end
+  end
+
+  return icon
+end
+
 local function wipe_regular_buffers()
   for _, buffer_number in ipairs(vim.api.nvim_list_bufs()) do
     if vim.api.nvim_buf_is_valid(buffer_number) and vim.bo[buffer_number].buflisted then
@@ -82,6 +143,14 @@ return {
 
   {
     "nvim-neo-tree/neo-tree.nvim",
+    init = function()
+      set_folder_icon_highlights()
+
+      vim.api.nvim_create_autocmd("ColorScheme", {
+        group = vim.api.nvim_create_augroup("user_neotree_material_folder_icons", { clear = true }),
+        callback = set_folder_icon_highlights,
+      })
+    end,
     keys = {
       { "<leader>e", false },
       {
@@ -102,6 +171,11 @@ return {
     },
     opts = {
       close_if_last_window = false,
+      default_component_configs = {
+        icon = {
+          provider = neo_tree_icon_provider,
+        },
+      },
       sources = { "filesystem", "git_status" },
       filesystem = {
         follow_current_file = { enabled = true },
