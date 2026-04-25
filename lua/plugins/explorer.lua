@@ -170,7 +170,7 @@ return {
       },
     },
     opts = {
-      close_if_last_window = false,
+      close_if_last_window = true,
       default_component_configs = {
         icon = {
           provider = neo_tree_icon_provider,
@@ -197,7 +197,7 @@ return {
       },
       window = {
         position = "left",
-        width = 40,
+        width = 43,
         mappings = {
           ["<leader>fd"] = "grep_in_directory",
         },
