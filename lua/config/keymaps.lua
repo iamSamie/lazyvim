@@ -126,3 +126,44 @@ vim.keymap.set({ "n", "x" }, "<M-CR>", vim.lsp.buf.code_action, { desc = "Code A
 vim.keymap.set("n", "gt", vim.lsp.buf.type_definition, { desc = "Go to Type Definition" })
 vim.keymap.set("n", "<leader>sd", "<cmd>Telescope diagnostics<cr>", { desc = "Search Diagnostics" })
 vim.keymap.set("n", "<leader>gm", "<cmd>DiffviewMergeConflicts<cr>", { desc = "Merge Conflicts View" })
+
+local function is_regular_scroll_buffer()
+  return vim.bo.buftype == ""
+end
+
+local function is_at_bottom_scroll_boundary()
+  if not is_regular_scroll_buffer() then
+    return false
+  end
+
+  local line_count = vim.api.nvim_buf_line_count(0)
+  local window_height = vim.api.nvim_win_get_height(0)
+  local maximum_topline = math.max(1, line_count - window_height + 1)
+  local view = vim.fn.winsaveview()
+
+  return view.topline >= maximum_topline
+end
+
+local function scroll_down_or_stop(keys)
+  if is_at_bottom_scroll_boundary() then
+    return ""
+  end
+
+  return keys
+end
+
+vim.keymap.set("n", "<ScrollWheelDown>", function()
+  return scroll_down_or_stop("<ScrollWheelDown>")
+end, { expr = true, desc = "Scroll Down Without Overscroll" })
+
+vim.keymap.set("n", "<C-e>", function()
+  return scroll_down_or_stop("<C-e>")
+end, { expr = true, desc = "Scroll Down Without Overscroll" })
+
+vim.keymap.set("n", "<C-d>", function()
+  return scroll_down_or_stop("<C-d>")
+end, { expr = true, desc = "Half Page Down Without Overscroll" })
+
+vim.keymap.set("n", "<PageDown>", function()
+  return scroll_down_or_stop("<PageDown>")
+end, { expr = true, desc = "Page Down Without Overscroll" })
