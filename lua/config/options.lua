@@ -5,6 +5,11 @@
 vim.g.lazyvim_explorer = "neo-tree"
 vim.g.autoformat = true
 
+local temporary_directory = vim.uv.os_tmpdir()
+local swap_directory = vim.fs.joinpath(temporary_directory, "nvim-swap")
+vim.fn.mkdir(swap_directory, "p")
+vim.opt.directory = swap_directory .. "//"
+
 vim.opt.number = true
 vim.opt.relativenumber = false
 

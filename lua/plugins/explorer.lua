@@ -110,6 +110,10 @@ local function wipe_missing_file_buffers()
   end
 end
 
+local function has_startup_arguments()
+  return vim.fn.argc() > 0
+end
+
 local is_session_restoring = false
 
 local function has_listed_regular_file_buffer()
@@ -353,9 +357,27 @@ return {
       end)
       table.insert(opts.post_restore_cmds, finish_session_restore)
       table.insert(opts.post_restore_cmds, open_neotree)
-      table.insert(opts.no_restore_cmds, wipe_regular_buffers)
-      table.insert(opts.no_restore_cmds, open_dashboard_if_no_files)
-      table.insert(opts.no_restore_cmds, open_neotree)
+      table.insert(opts.no_restore_cmds, function()
+        if has_startup_arguments() then
+          return
+        end
+
+        wipe_regular_buffers()
+      end)
+      table.insert(opts.no_restore_cmds, function()
+        if has_startup_arguments() then
+          return
+        end
+
+        open_dashboard_if_no_files()
+      end)
+      table.insert(opts.no_restore_cmds, function()
+        if has_startup_arguments() then
+          return
+        end
+
+        open_neotree()
+      end)
     end,
   },
 }
