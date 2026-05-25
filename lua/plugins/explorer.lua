@@ -207,10 +207,189 @@ local function open_git_diff(state)
     return
   end
 
-  local ok, err = pcall(vim.cmd, "DiffviewOpen -- " .. vim.fn.fnameescape(node.path))
-  if not ok then
-    vim.notify("Diffview failed: " .. tostring(err), vim.log.levels.WARN)
+  local function open_git_diff_for_path(file_path)
+    local target_window = get_dashboard_target_window()
+
+    if not target_window then
+      vim.notify("Нет окна для открытия diff", vim.log.levels.WARN)
+      return
+    end
+
+    local repo_root = LazyVim.root()
+    local relative_file_path = file_path:gsub(vim.pesc(repo_root .. "/"), "", 1)
+    local head_file_lines = vim.fn.systemlist({
+      "git",
+      "-C",
+      repo_root,
+      "show",
+      "HEAD:" .. relative_file_path,
+    })
+
+    if vim.v.shell_error ~= 0 then
+      vim.notify("Не удалось получить версию файла из HEAD", vim.log.levels.WARN)
+      return
+    end
+
+    for _, window_number in ipairs(vim.api.nvim_list_wins()) do
+      local window_buffer = vim.api.nvim_win_get_buf(window_number)
+      local buffer_name = vim.api.nvim_buf_get_name(window_buffer)
+
+      if vim.startswith(buffer_name, "git://HEAD/") then
+        pcall(vim.api.nvim_win_close, window_number, true)
+      end
+    end
+
+    vim.api.nvim_set_current_win(target_window)
+    vim.cmd("diffoff!")
+    vim.cmd("edit " .. vim.fn.fnameescape(file_path))
+    vim.cmd("diffthis")
+
+    local working_tree_buffer = vim.api.nvim_get_current_buf()
+    local working_tree_filetype = vim.bo[working_tree_buffer].filetype
+
+    vim.cmd("leftabove vnew")
+
+    local head_buffer = vim.api.nvim_get_current_buf()
+
+    vim.bo[head_buffer].buftype = "nofile"
+    vim.bo[head_buffer].bufhidden = "wipe"
+    vim.bo[head_buffer].buflisted = false
+    vim.bo[head_buffer].swapfile = false
+    vim.bo[head_buffer].modifiable = true
+    vim.bo[head_buffer].readonly = false
+    vim.bo[head_buffer].filetype = working_tree_filetype
+
+    vim.api.nvim_buf_set_lines(head_buffer, 0, -1, false, head_file_lines)
+    vim.api.nvim_buf_set_name(head_buffer, "git://HEAD/" .. relative_file_path)
+    vim.b[head_buffer].is_git_diff_head = true
+
+    vim.bo[head_buffer].modifiable = false
+    vim.bo[head_buffer].readonly = true
+
+    vim.cmd("diffthis")
+    vim.api.nvim_set_current_win(target_window)
+    vim.cmd("wincmd l")
+    vim.cmd("wincmd =")
   end
+
+  open_git_diff_for_path(node.path)
+end
+
+local function get_git_diff_target_file_path()
+  for _, window_number in ipairs(vim.api.nvim_list_wins()) do
+    local window_buffer = vim.api.nvim_win_get_buf(window_number)
+    local buffer_name = vim.api.nvim_buf_get_name(window_buffer)
+    local is_floating_window = vim.api.nvim_win_get_config(window_number).relative ~= ""
+
+    if not is_floating_window and vim.wo[window_number].diff and not vim.startswith(buffer_name, "git://HEAD/") then
+      return buffer_name
+    end
+  end
+
+  local current_buffer_name = vim.api.nvim_buf_get_name(0)
+
+  if current_buffer_name ~= "" and not vim.startswith(current_buffer_name, "git://HEAD/") then
+    return current_buffer_name
+  end
+
+  return nil
+end
+
+local function get_changed_git_file_paths()
+  local repo_root = LazyVim.root()
+  local changed_file_lines = vim.fn.systemlist({
+    "git",
+    "-C",
+    repo_root,
+    "status",
+    "--short",
+    "--no-renames",
+    "--untracked-files=all",
+  })
+
+  if vim.v.shell_error ~= 0 then
+    vim.notify("Не удалось получить список изменённых файлов", vim.log.levels.WARN)
+    return {}
+  end
+
+  local changed_file_paths = {}
+
+  for _, changed_file_line in ipairs(changed_file_lines) do
+    local relative_file_path = vim.trim(changed_file_line:sub(4))
+
+    if relative_file_path ~= "" then
+      table.insert(changed_file_paths, vim.fs.joinpath(repo_root, relative_file_path))
+    end
+  end
+
+  return changed_file_paths
+end
+
+local function navigate_git_diff_file(step)
+  local current_file_path = get_git_diff_target_file_path()
+
+  if not current_file_path then
+    vim.notify("Сейчас не открыт git diff файла", vim.log.levels.INFO)
+    return
+  end
+
+  local changed_file_paths = get_changed_git_file_paths()
+
+  if #changed_file_paths == 0 then
+    vim.notify("Нет изменённых файлов", vim.log.levels.INFO)
+    return
+  end
+
+  local current_file_index = nil
+
+  for file_index, changed_file_path in ipairs(changed_file_paths) do
+    if vim.fs.normalize(changed_file_path) == vim.fs.normalize(current_file_path) then
+      current_file_index = file_index
+      break
+    end
+  end
+
+  if not current_file_index then
+    vim.notify("Текущий файл не найден в git status", vim.log.levels.INFO)
+    return
+  end
+
+  local target_file_index = current_file_index + step
+
+  if target_file_index < 1 then
+    target_file_index = #changed_file_paths
+  end
+
+  if target_file_index > #changed_file_paths then
+    target_file_index = 1
+  end
+
+  local target_file_path = changed_file_paths[target_file_index]
+  local target_file_state = {
+    tree = {
+      get_node = function()
+        return {
+          path = target_file_path,
+          type = "file",
+        }
+      end,
+    },
+  }
+
+  open_git_diff(target_file_state)
+end
+
+local function accept_git_diff_change()
+  if not vim.wo.diff then
+    vim.notify("Команда работает только в diff режиме", vim.log.levels.INFO)
+    return
+  end
+
+  vim.cmd("diffget")
+end
+
+local function reset_git_hunk()
+  require("gitsigns").reset_hunk()
 end
 
 local function grep_in_directory(state)
@@ -233,6 +412,44 @@ end
 
 local function show_neotree()
   require("neo-tree.command").execute({ action = "show", source = "filesystem", position = "left", dir = LazyVim.root() })
+end
+
+local function show_neotree_git()
+  require("neo-tree.command").execute({ action = "show", source = "git_status", position = "left", dir = LazyVim.root() })
+end
+
+local function close_git_diff()
+  local closed_head_window = false
+
+  for _, window_number in ipairs(vim.api.nvim_list_wins()) do
+    local buffer_number = vim.api.nvim_win_get_buf(window_number)
+    local buffer_name = vim.api.nvim_buf_get_name(buffer_number)
+
+    if vim.startswith(buffer_name, "git://HEAD/") then
+      pcall(vim.api.nvim_win_close, window_number, true)
+      closed_head_window = true
+    end
+  end
+
+  if closed_head_window then
+    for _, window_number in ipairs(vim.api.nvim_list_wins()) do
+      local buffer_number = vim.api.nvim_win_get_buf(window_number)
+      local is_floating_window = vim.api.nvim_win_get_config(window_number).relative ~= ""
+
+      if not is_floating_window and vim.bo[buffer_number].filetype ~= "neo-tree" and vim.wo[window_number].diff then
+        vim.api.nvim_win_call(window_number, function()
+          vim.cmd("diffoff")
+        end)
+      end
+    end
+
+    vim.cmd("wincmd =")
+    return
+  end
+
+  if vim.fn.exists(":DiffviewClose") == 2 then
+    vim.cmd("DiffviewClose")
+  end
 end
 
 local function focus_file_instead_of_quitting_neotree()
@@ -317,6 +534,26 @@ return {
         "<D-E>",
         show_neotree,
         desc = "Explorer NeoTree",
+      },
+      {
+        "<leader>R",
+        show_neotree_git,
+        desc = "Explorer NeoTree Git",
+      },
+      {
+        "<leader>gd",
+        close_git_diff,
+        desc = "Close Git Diff",
+      },
+      {
+        "<leader>ga",
+        accept_git_diff_change,
+        desc = "Accept Git Diff Change",
+      },
+      {
+        "<leader>gr",
+        reset_git_hunk,
+        desc = "Reset Git Hunk",
       },
     },
     opts = {

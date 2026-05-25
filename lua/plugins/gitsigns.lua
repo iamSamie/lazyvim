@@ -27,6 +27,22 @@ return {
           gitsigns.blame_line({ full = true })
         end, vim.tbl_extend("force", keymap_options, { desc = "Blame Line" }))
 
+        vim.keymap.set({ "n", "x" }, "<leader>ghr", function()
+          gitsigns.reset_hunk()
+        end, vim.tbl_extend("force", keymap_options, { desc = "Reset Git Hunk" }))
+
+        vim.keymap.set({ "n", "x" }, "<leader>ghs", function()
+          gitsigns.stage_hunk()
+        end, vim.tbl_extend("force", keymap_options, { desc = "Stage Git Hunk" }))
+
+        vim.keymap.set("n", "<leader>gj", function()
+          gitsigns.next_hunk()
+        end, vim.tbl_extend("force", keymap_options, { desc = "Next Hunk" }))
+
+        vim.keymap.set("n", "<leader>gk", function()
+          gitsigns.prev_hunk()
+        end, vim.tbl_extend("force", keymap_options, { desc = "Previous Hunk" }))
+
         vim.keymap.set("n", "<leader>tb", function()
           gitsigns.toggle_current_line_blame()
         end, vim.tbl_extend("force", keymap_options, { desc = "Toggle Line Blame" }))
@@ -72,6 +88,22 @@ return {
           end
 
           attach_to_buffer({ bufnr = buffer_number, trigger = event.event })
+        end,
+      })
+
+      vim.api.nvim_create_autocmd("BufWinEnter", {
+        group = vim.api.nvim_create_augroup("user_diff_mode_keymaps", { clear = true }),
+        callback = function(event)
+          if not vim.wo.diff then
+            return
+          end
+
+          local keymap_options = { buffer = event.buf, silent = true }
+
+          vim.keymap.set("n", "gh", "<cmd>diffget<cr>", vim.tbl_extend("force", keymap_options, { desc = "Accept Change from HEAD" }))
+          vim.keymap.set("x", "gh", ":diffget<cr>", vim.tbl_extend("force", keymap_options, { desc = "Accept Selection from HEAD" }))
+          vim.keymap.set("n", "gH", "<cmd>diffput<cr>", vim.tbl_extend("force", keymap_options, { desc = "Apply Change to Other Side" }))
+          vim.keymap.set("x", "gH", ":diffput<cr>", vim.tbl_extend("force", keymap_options, { desc = "Apply Selection to Other Side" }))
         end,
       })
     end,

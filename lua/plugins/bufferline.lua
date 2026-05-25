@@ -71,6 +71,11 @@ return {
     opts = {
       options = {
         always_show_bufferline = true,
+        custom_filter = function(buffer_number)
+          local buffer_name = vim.api.nvim_buf_get_name(buffer_number)
+
+          return not vim.startswith(buffer_name, "git://HEAD/")
+        end,
         diagnostics = "nvim_lsp",
         offsets = {
           {
