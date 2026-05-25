@@ -116,22 +116,7 @@ end
 
 local is_session_restoring = false
 
-local function has_listed_regular_file_buffer()
-  for _, buffer_number in ipairs(vim.api.nvim_list_bufs()) do
-    if vim.api.nvim_buf_is_valid(buffer_number) and vim.bo[buffer_number].buflisted then
-      local buffer_options = vim.bo[buffer_number]
-      local buffer_name = vim.api.nvim_buf_get_name(buffer_number)
-
-      if buffer_options.buftype == "" and buffer_name ~= "" and vim.uv.fs_stat(buffer_name) ~= nil then
-        return true
-      end
-    end
-  end
-
-  return false
-end
-
-local function get_dashboard_target_window()
+local function get_non_neotree_target_window()
   local current_window = vim.api.nvim_get_current_win()
   local current_buffer = vim.api.nvim_win_get_buf(current_window)
 
@@ -151,50 +136,10 @@ local function get_dashboard_target_window()
   return nil
 end
 
-local function open_dashboard_if_no_files(delay)
-  local dashboard_delay = type(delay) == "number" and delay or 50
-
-  vim.defer_fn(function()
-    if is_session_restoring then
-      return
-    end
-
-    if has_listed_regular_file_buffer() then
-      return
-    end
-
-    local dashboard_ok, dashboard = pcall(require, "snacks.dashboard")
-
-    if not dashboard_ok then
-      return
-    end
-
-    local target_window = get_dashboard_target_window()
-
-    if not target_window then
-      return
-    end
-
-    local current_buffer = vim.api.nvim_win_get_buf(target_window)
-
-    if vim.bo[current_buffer].filetype == "snacks_dashboard" then
-      return
-    end
-
-    if vim.api.nvim_buf_get_name(current_buffer) ~= "" or vim.bo[current_buffer].modified then
-      return
-    end
-
-    local dashboard_buffer = vim.api.nvim_create_buf(false, true)
-    pcall(dashboard.open, { buf = dashboard_buffer, win = target_window })
-  end, dashboard_delay)
-end
-
 local function finish_session_restore()
   vim.defer_fn(function()
     is_session_restoring = false
     wipe_missing_file_buffers()
-    open_dashboard_if_no_files(100)
   end, 300)
 end
 
@@ -208,7 +153,7 @@ local function open_git_diff(state)
   end
 
   local function open_git_diff_for_path(file_path)
-    local target_window = get_dashboard_target_window()
+    local target_window = get_non_neotree_target_window()
 
     if not target_window then
       vim.notify("Нет окна для открытия diff", vim.log.levels.WARN)
@@ -476,27 +421,6 @@ end
 return {
   {
     "folke/snacks.nvim",
-    init = function()
-      vim.api.nvim_create_autocmd({ "BufDelete", "BufWipeout" }, {
-        group = vim.api.nvim_create_augroup("user_open_dashboard_when_no_files", { clear = true }),
-        desc = "Open dashboard when the last file buffer is closed",
-        callback = function(args)
-          if is_session_restoring then
-            return
-          end
-
-          local filetype_success, deleted_filetype = pcall(function()
-            return vim.bo[args.buf].filetype
-          end)
-
-          if filetype_success and (deleted_filetype == "snacks_dashboard" or deleted_filetype == "neo-tree") then
-            return
-          end
-
-          open_dashboard_if_no_files()
-        end,
-      })
-    end,
     keys = {
       { "<leader>fe", false },
       { "<leader>fE", false },
@@ -624,13 +548,6 @@ return {
         end
 
         wipe_regular_buffers()
-      end)
-      table.insert(opts.no_restore_cmds, function()
-        if has_startup_arguments() then
-          return
-        end
-
-        open_dashboard_if_no_files()
       end)
       table.insert(opts.no_restore_cmds, function()
         if has_startup_arguments() then
