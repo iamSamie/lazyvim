@@ -1,12 +1,16 @@
 return {
   {
     "lewis6991/gitsigns.nvim",
-    enabled = false,
+    enabled = true,
     lazy = false,
     opts = function(_, opts)
       local original_on_attach = opts.on_attach
 
       opts.auto_attach = false
+      opts.current_line_blame = false
+      opts.current_line_blame_opts = {
+        delay = 200,
+      }
       opts.on_attach = function(buffer)
         if original_on_attach then
           original_on_attach(buffer)
@@ -22,6 +26,18 @@ return {
         vim.keymap.set("n", "<leader>ghB", function()
           gitsigns.blame_line({ full = true })
         end, vim.tbl_extend("force", keymap_options, { desc = "Blame Line" }))
+
+        vim.keymap.set("n", "<leader>tb", function()
+          gitsigns.toggle_current_line_blame()
+        end, vim.tbl_extend("force", keymap_options, { desc = "Toggle Line Blame" }))
+
+        vim.keymap.set("n", "<A-\\>", function()
+          gitsigns.toggle_current_line_blame()
+        end, vim.tbl_extend("force", keymap_options, { desc = "Toggle Line Blame" }))
+
+        vim.keymap.set({ "n", "x" }, "<D-A-z>", function()
+          gitsigns.reset_hunk()
+        end, vim.tbl_extend("force", keymap_options, { desc = "Reset Git Hunk" }))
       end
     end,
     config = function(_, opts)
