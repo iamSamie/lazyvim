@@ -17,9 +17,6 @@ return {
   {
     "lewis6991/satellite.nvim",
     event = "BufReadPost",
-    dependencies = {
-      "lewis6991/gitsigns.nvim",
-    },
     opts = {
       current_only = true,
       winblend = 35,
@@ -47,7 +44,7 @@ return {
           min_severity = vim.diagnostic.severity.HINT,
         },
         gitsigns = {
-          enable = true,
+          enable = false,
           signs = {
             add = "▏",
             change = "▏",
