@@ -235,6 +235,27 @@ local function show_neotree()
   require("neo-tree.command").execute({ action = "show", source = "filesystem", position = "left", dir = LazyVim.root() })
 end
 
+local function focus_file_instead_of_quitting_neotree()
+  local current_buffer = vim.api.nvim_get_current_buf()
+
+  if vim.bo[current_buffer].filetype ~= "neo-tree" then
+    vim.cmd("quit")
+    return
+  end
+
+  for _, window_number in ipairs(vim.api.nvim_list_wins()) do
+    local window_buffer = vim.api.nvim_win_get_buf(window_number)
+    local is_floating_window = vim.api.nvim_win_get_config(window_number).relative ~= ""
+
+    if not is_floating_window and vim.bo[window_buffer].filetype ~= "neo-tree" then
+      vim.api.nvim_set_current_win(window_number)
+      return
+    end
+  end
+
+  vim.notify("Нет окна с файлом для переключения", vim.log.levels.INFO)
+end
+
 return {
   {
     "folke/snacks.nvim",
@@ -271,6 +292,9 @@ return {
     "nvim-neo-tree/neo-tree.nvim",
     init = function()
       set_folder_icon_highlights()
+
+      vim.api.nvim_create_user_command("SmartQuit", focus_file_instead_of_quitting_neotree, {})
+      vim.cmd([[cnoreabbrev <expr> q getcmdtype() == ':' && getcmdline() ==# 'q' ? 'SmartQuit' : 'q']])
 
       vim.api.nvim_create_autocmd("ColorScheme", {
         group = vim.api.nvim_create_augroup("user_neotree_material_folder_icons", { clear = true }),
