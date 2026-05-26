@@ -337,6 +337,28 @@ local function reset_git_hunk()
   require("gitsigns").reset_hunk()
 end
 
+local function remember_directory_search_path(directory_path)
+  vim.g.directory_search_path = vim.fs.normalize(vim.fn.fnamemodify(directory_path, ":p"))
+end
+
+local function find_files_in_directory(state)
+  local node = state.tree:get_node()
+
+  if not node then
+    vim.notify("No node selected", vim.log.levels.WARN)
+    return
+  end
+
+  local directory_path = node.type == "directory" and node.path or vim.fs.dirname(node.path)
+
+  remember_directory_search_path(directory_path)
+
+  require("telescope.builtin").find_files({
+    cwd = directory_path,
+    hidden = true,
+  })
+end
+
 local function grep_in_directory(state)
   local node = state.tree:get_node()
 
@@ -345,13 +367,12 @@ local function grep_in_directory(state)
     return
   end
 
-  if node.type ~= "directory" then
-    vim.notify("Select a directory in Neo-tree", vim.log.levels.WARN)
-    return
-  end
+  local directory_path = node.type == "directory" and node.path or vim.fs.dirname(node.path)
+
+  remember_directory_search_path(directory_path)
 
   require("telescope.builtin").live_grep({
-    cwd = node.path,
+    cwd = directory_path,
   })
 end
 
@@ -515,7 +536,8 @@ return {
         position = "left",
         width = 43,
         mappings = {
-          ["<leader>fd"] = "grep_in_directory",
+          ["<leader>fd"] = "find_files_in_directory",
+          ["<leader>fD"] = "grep_in_directory",
         },
       },
       git_status = {
@@ -530,6 +552,7 @@ return {
         },
       },
       commands = {
+        find_files_in_directory = find_files_in_directory,
         grep_in_directory = grep_in_directory,
       },
     },

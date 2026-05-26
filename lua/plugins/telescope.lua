@@ -1,4 +1,5 @@
 local repository_status_namespace = vim.api.nvim_create_namespace("repository_status_highlights")
+local directory_search_memory_key = "directory_search_path"
 
 local function set_repository_status_highlights()
   vim.api.nvim_set_hl(0, "RepositoryStatusChanges", { fg = "#e0af68" })
@@ -62,6 +63,105 @@ local function has_git_upstream(directory_path)
   })
 
   return vim.v.shell_error == 0
+end
+
+local function normalize_directory_path(directory_path)
+  return vim.fs.normalize(vim.fn.fnamemodify(directory_path, ":p"))
+end
+
+local function format_directory_search_title(action_name, directory_path)
+  local home_directory_path = vim.fs.normalize(vim.env.HOME or "")
+  local display_directory_path = directory_path
+
+  if home_directory_path ~= "" then
+    display_directory_path = directory_path:gsub("^" .. vim.pesc(home_directory_path), "~", 1)
+  end
+
+  return action_name .. " • " .. display_directory_path
+end
+
+local function remember_directory_search_path(directory_path)
+  vim.g[directory_search_memory_key] = normalize_directory_path(directory_path)
+end
+
+local function get_remembered_directory_search_path()
+  local remembered_directory_path = vim.g[directory_search_memory_key]
+
+  if type(remembered_directory_path) ~= "string" or remembered_directory_path == "" then
+    return nil
+  end
+
+  return normalize_directory_path(remembered_directory_path)
+end
+
+local function get_neotree_directory_search_path()
+  if vim.bo.filetype ~= "neo-tree" then
+    return nil
+  end
+
+  local has_manager, neotree_manager = pcall(require, "neo-tree.sources.manager")
+
+  if not has_manager then
+    return nil
+  end
+
+  local filesystem_state = neotree_manager.get_state("filesystem")
+
+  if not filesystem_state or not filesystem_state.tree then
+    return nil
+  end
+
+  local selected_node = filesystem_state.tree:get_node()
+
+  if not selected_node or not selected_node.path then
+    return nil
+  end
+
+  if selected_node.type == "directory" then
+    return normalize_directory_path(selected_node.path)
+  end
+
+  return normalize_directory_path(vim.fs.dirname(selected_node.path))
+end
+
+local function resolve_directory_search_path()
+  local neotree_directory_path = get_neotree_directory_search_path()
+
+  if neotree_directory_path then
+    remember_directory_search_path(neotree_directory_path)
+    return neotree_directory_path
+  end
+
+  local remembered_directory_path = get_remembered_directory_search_path()
+
+  if remembered_directory_path then
+    return remembered_directory_path
+  end
+
+  local root_directory_path = normalize_directory_path(LazyVim.root())
+
+  remember_directory_search_path(root_directory_path)
+
+  return root_directory_path
+end
+
+local function find_files_in_directory()
+  local directory_path = resolve_directory_search_path()
+
+  require("telescope.builtin").find_files({
+    cwd = directory_path,
+    hidden = true,
+    prompt_title = format_directory_search_title("Find Files", directory_path),
+  })
+end
+
+local function grep_in_directory()
+  local directory_path = resolve_directory_search_path()
+
+  require("telescope.builtin").live_grep({
+    cwd = directory_path,
+    prompt_title = format_directory_search_title("Grep", directory_path),
+  })
 end
 
 local function get_git_sync_status(directory_path)
@@ -337,8 +437,11 @@ return {
       {
         "<leader><space>",
         function()
+          local root_directory_path = normalize_directory_path(LazyVim.root())
+
           require("telescope.builtin").live_grep({
-            cwd = LazyVim.root(),
+            cwd = root_directory_path,
+            prompt_title = format_directory_search_title("Grep", root_directory_path),
           })
         end,
         desc = "Grep (Root Dir)",
@@ -346,9 +449,12 @@ return {
       {
         "<leader>ff",
         function()
+          local root_directory_path = normalize_directory_path(LazyVim.root())
+
           require("telescope.builtin").find_files({
-            cwd = LazyVim.root(),
+            cwd = root_directory_path,
             hidden = true,
+            prompt_title = format_directory_search_title("Find Files", root_directory_path),
           })
         end,
         desc = "Find Files (Root Dir)",
@@ -356,8 +462,11 @@ return {
       {
         "<leader>/",
         function()
+          local root_directory_path = normalize_directory_path(LazyVim.root())
+
           require("telescope.builtin").live_grep({
-            cwd = LazyVim.root(),
+            cwd = root_directory_path,
+            prompt_title = format_directory_search_title("Grep", root_directory_path),
           })
         end,
         desc = "Grep (Root Dir)",
@@ -379,8 +488,11 @@ return {
       {
         "<leader>fr",
         function()
+          local current_working_directory_path = normalize_directory_path(vim.uv.cwd())
+
           require("telescope.builtin").oldfiles({
-            cwd = vim.uv.cwd(),
+            cwd = current_working_directory_path,
+            prompt_title = format_directory_search_title("Recent Files", current_working_directory_path),
           })
         end,
         desc = "Recent Files (cwd)",
@@ -398,6 +510,16 @@ return {
           require("telescope.builtin").help_tags()
         end,
         desc = "Help Pages",
+      },
+      {
+        "<leader>fd",
+        find_files_in_directory,
+        desc = "Find Files in Directory",
+      },
+      {
+        "<leader>fD",
+        grep_in_directory,
+        desc = "Grep in Directory",
       },
       {
         "<leader>fG",
