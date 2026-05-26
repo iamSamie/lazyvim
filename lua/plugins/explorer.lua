@@ -421,6 +421,11 @@ end
 return {
   {
     "folke/snacks.nvim",
+    opts = {
+      dashboard = {
+        enabled = false,
+      },
+    },
     keys = {
       { "<leader>fe", false },
       { "<leader>fE", false },

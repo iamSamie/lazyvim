@@ -115,6 +115,18 @@ vim.keymap.set("n", "<D-C-c>p", function()
   vim.notify("Copied path: " .. rel)
 end, { desc = "Copy Relative File Path" })
 
+vim.keymap.set("n", "<D-C-c>a", function()
+  local file = vim.api.nvim_buf_get_name(0)
+  if file == "" then
+    vim.notify("No file path to copy", vim.log.levels.WARN)
+    return
+  end
+
+  vim.fn.setreg("+", file)
+  vim.fn.setreg("*", file)
+  vim.notify("Copied path: " .. file)
+end, { desc = "Copy Absolute File Path" })
+
 vim.keymap.set("n", "<D-/>", "gcc", { desc = "Comment Line", remap = true })
 vim.keymap.set("x", "<D-/>", "gc", { desc = "Comment Selection", remap = true })
 vim.keymap.set("n", "<D-j>", "<cmd>move .+1<cr>==", { desc = "Move Line Down" })
