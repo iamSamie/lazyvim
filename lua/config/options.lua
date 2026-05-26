@@ -20,5 +20,15 @@ vim.opt.linebreak = true
 -- Keep more context visible before vertical scrolling starts.
 vim.opt.scrolloff = 20
 
+vim.opt.fillchars:append({
+  horiz = "─",
+  horizdown = "┬",
+  horizup = "┴",
+  vert = "│",
+  verthoriz = "┼",
+  vertleft = "┤",
+  vertright = "├",
+})
+
 -- Always write a trailing newline at EOF.
 vim.opt.fixendofline = true

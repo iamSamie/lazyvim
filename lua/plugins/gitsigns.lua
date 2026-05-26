@@ -43,7 +43,7 @@ return {
           gitsigns.prev_hunk()
         end, vim.tbl_extend("force", keymap_options, { desc = "Previous Hunk" }))
 
-        vim.keymap.set("n", "<leader>tb", function()
+        vim.keymap.set("n", "<leader>gb", function()
           gitsigns.toggle_current_line_blame()
         end, vim.tbl_extend("force", keymap_options, { desc = "Toggle Line Blame" }))
 

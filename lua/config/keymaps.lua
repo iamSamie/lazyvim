@@ -6,6 +6,8 @@ local function terminal_root_directory()
   return vim.fn.fnameescape(LazyVim.root())
 end
 
+local preferred_terminal_direction = "float"
+
 local function next_terminal_count()
   local terminal_manager = require("toggleterm.terminal")
   local terminal_list = terminal_manager.get_all(true)
@@ -20,36 +22,58 @@ local function next_terminal_count()
 end
 
 local function toggle_terminal(terminal_count)
-  vim.cmd(terminal_count .. "ToggleTerm direction=horizontal dir=" .. terminal_root_directory())
+  vim.cmd(terminal_count .. "ToggleTerm direction=" .. preferred_terminal_direction .. " dir=" .. terminal_root_directory())
 end
 
 local function create_terminal()
   toggle_terminal(next_terminal_count())
 end
 
-local function toggle_all_terminals()
-  local terminal_manager = require("toggleterm.terminal")
-  local terminal_list = terminal_manager.get_all(true)
+local function toggle_primary_terminal()
+  toggle_terminal(1)
+end
 
-  if #terminal_list == 0 then
-    toggle_terminal(1)
+local function set_terminal_direction(direction)
+  local terminal_manager = require("toggleterm.terminal")
+  local primary_terminal = terminal_manager.get(1)
+  local terminal_is_open = primary_terminal and primary_terminal:is_open()
+
+  preferred_terminal_direction = direction
+
+  if not primary_terminal then
     return
   end
 
-  vim.cmd("ToggleTermToggleAll")
+  if terminal_is_open then
+    primary_terminal:close()
+  end
+
+  primary_terminal.direction = direction
+
+  if terminal_is_open then
+    vim.schedule(toggle_primary_terminal)
+  end
 end
 
 vim.keymap.set({ "n", "t" }, "<C-`>", function()
-  toggle_all_terminals()
-end, { desc = "Toggle Terminal Section" })
+  toggle_primary_terminal()
+end, { desc = "Toggle Terminal" })
 
 vim.keymap.set({ "n", "t" }, "<C-/>", function()
-  toggle_all_terminals()
-end, { desc = "Toggle Terminal Section" })
+  toggle_primary_terminal()
+end, { desc = "Toggle Terminal" })
 
 vim.keymap.set({ "n", "t" }, "<leader>tt", function()
   create_terminal()
 end, { desc = "New Terminal" })
+
+vim.keymap.set("n", "<leader>tf", function()
+  set_terminal_direction("float")
+end, { desc = "Use Floating Terminal" })
+
+vim.keymap.set("n", "<leader>tb", function()
+  set_terminal_direction("horizontal")
+end, { desc = "Use Bottom Terminal" })
 
 vim.keymap.set("n", "<leader>ts", function()
   vim.cmd("TermSelect")
@@ -59,11 +83,23 @@ vim.keymap.set({ "n", "t" }, "<leader>t1", function()
   toggle_terminal(1)
 end, { desc = "Terminal 1" })
 
+vim.keymap.set({ "n", "t" }, "<M-1>", function()
+  toggle_terminal(1)
+end, { desc = "Terminal 1" })
+
 vim.keymap.set({ "n", "t" }, "<leader>t2", function()
   toggle_terminal(2)
 end, { desc = "Terminal 2" })
 
+vim.keymap.set({ "n", "t" }, "<M-2>", function()
+  toggle_terminal(2)
+end, { desc = "Terminal 2" })
+
 vim.keymap.set({ "n", "t" }, "<leader>t3", function()
+  toggle_terminal(3)
+end, { desc = "Terminal 3" })
+
+vim.keymap.set({ "n", "t" }, "<M-3>", function()
   toggle_terminal(3)
 end, { desc = "Terminal 3" })
 

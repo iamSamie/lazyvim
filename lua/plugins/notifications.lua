@@ -8,6 +8,11 @@ return {
         replace = false,
         merge = false,
       },
+      lsp = {
+        progress = {
+          enabled = false,
+        },
+      },
       views = {
         mini = {
           timeout = 7000,
@@ -26,6 +31,62 @@ return {
 
       vim.api.nvim_create_autocmd("ColorScheme", {
         callback = set_noice_highlights,
+      })
+
+      local progress_by_client = vim.defaulttable(function()
+        return {}
+      end)
+
+      vim.api.nvim_create_autocmd("LspProgress", {
+        callback = function(event)
+          local client = vim.lsp.get_client_by_id(event.data.client_id)
+          local progress_value = event.data.params.value
+
+          if not client or type(progress_value) ~= "table" then
+            return
+          end
+
+          local client_progress_list = progress_by_client[client.id]
+
+          for progress_index = 1, #client_progress_list + 1 do
+            if progress_index == #client_progress_list + 1 or client_progress_list[progress_index].token == event.data.params.token then
+              client_progress_list[progress_index] = {
+                token = event.data.params.token,
+                message = ("%s%s"):format(
+                  progress_value.title or "",
+                  progress_value.message and (" %s"):format(progress_value.message) or ""
+                ),
+                done = progress_value.kind == "end",
+              }
+              break
+            end
+          end
+
+          local message_lines = {}
+
+          progress_by_client[client.id] = vim.tbl_filter(function(progress_item)
+            if progress_item.message ~= "" then
+              table.insert(message_lines, progress_item.message)
+            end
+
+            return not progress_item.done
+          end, client_progress_list)
+
+          if #message_lines == 0 then
+            vim.notify("Done", vim.log.levels.INFO, {
+              id = "lsp_progress_" .. client.id,
+              title = client.name,
+              timeout = 1500,
+            })
+            return
+          end
+
+          vim.notify(table.concat(message_lines, "\n"), vim.log.levels.INFO, {
+            id = "lsp_progress_" .. client.id,
+            title = client.name,
+            timeout = 7000,
+          })
+        end,
       })
     end,
   },
