@@ -2,9 +2,15 @@ return {
   {
     "folke/noice.nvim",
     opts = {
+      notify = {
+        enabled = true,
+        view = "notify",
+        replace = false,
+        merge = false,
+      },
       views = {
         mini = {
-          timeout = 6000,
+          timeout = 7000,
         },
       },
     },
@@ -27,7 +33,14 @@ return {
     "snacks.nvim",
     opts = {
       notifier = {
-        enabled = false,
+        enabled = true,
+        timeout = 7000,
+        width = { min = 80, max = 80 },
+        margin = { top = 0, right = 1, bottom = 2 },
+        padding = true,
+        gap = 1,
+        top_down = false,
+        style = "compact",
       },
     },
   },
