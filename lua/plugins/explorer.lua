@@ -85,6 +85,35 @@ local function neo_tree_icon_provider(icon, node)
   return icon
 end
 
+local function copy_to_clipboard(value)
+  vim.fn.setreg("+", value)
+  vim.fn.setreg("*", value)
+  vim.notify("Copied path: " .. value)
+end
+
+local function copy_neotree_relative_path(state)
+  local node = state.tree:get_node()
+
+  if not node or not node.path then
+    vim.notify("No file path to copy", vim.log.levels.WARN)
+    return
+  end
+
+  local relative_path = vim.fs.relpath(node.path, LazyVim.root()) or vim.fn.fnamemodify(node.path, ":.")
+  copy_to_clipboard(relative_path)
+end
+
+local function copy_neotree_absolute_path(state)
+  local node = state.tree:get_node()
+
+  if not node or not node.path then
+    vim.notify("No file path to copy", vim.log.levels.WARN)
+    return
+  end
+
+  copy_to_clipboard(node.path)
+end
+
 local function wipe_regular_buffers()
   for _, buffer_number in ipairs(vim.api.nvim_list_bufs()) do
     if vim.api.nvim_buf_is_valid(buffer_number) and vim.bo[buffer_number].buflisted then
@@ -439,14 +468,56 @@ local function focus_file_instead_of_quitting_neotree()
   vim.notify("Нет окна с файлом для переключения", vim.log.levels.INFO)
 end
 
+local function get_picker_preview_relative_file_path(picker, item)
+  if not (item and item.file) then
+    return nil
+  end
+
+  local absolute_file_path = vim.fs.normalize(item.file)
+  local project_root_directory = vim.fs.normalize(picker:cwd() or LazyVim.root() or vim.uv.cwd())
+  local project_root_prefix = project_root_directory .. "/"
+
+  if vim.startswith(absolute_file_path, project_root_prefix) then
+    return absolute_file_path:sub(#project_root_prefix + 1)
+  end
+
+  local relative_file_path = vim.fs.relpath(absolute_file_path, project_root_directory)
+
+  if relative_file_path and not vim.startswith(relative_file_path, "../") then
+    return relative_file_path
+  end
+
+  return absolute_file_path
+end
+
+local function set_picker_preview_relative_file_path(picker, item)
+  local resolved_item = picker:resolve(item)
+  local preview_relative_file_path = get_picker_preview_relative_file_path(picker, resolved_item)
+
+  vim.schedule(function()
+    if picker.closed or not (picker.preview and picker.preview.win and picker.preview.win:valid()) then
+      return
+    end
+
+    picker.preview:set_title(preview_relative_file_path)
+    picker:update_titles()
+  end)
+end
+
 return {
   {
     "folke/snacks.nvim",
-    opts = {
-      dashboard = {
+    opts = function(_, opts)
+      opts.dashboard = {
         enabled = false,
-      },
-    },
+      }
+
+      opts.picker = opts.picker or {}
+      opts.picker.sources = opts.picker.sources or {}
+      opts.picker.sources.lsp_references = vim.tbl_deep_extend("force", opts.picker.sources.lsp_references or {}, {
+        on_change = set_picker_preview_relative_file_path,
+      })
+    end,
     keys = {
       { "<leader>fe", false },
       { "<leader>fE", false },
@@ -538,6 +609,8 @@ return {
         mappings = {
           ["<leader>fd"] = "find_files_in_directory",
           ["<leader>fD"] = "grep_in_directory",
+          ["<D-C-c>p"] = "copy_relative_path",
+          ["<D-C-c>a"] = "copy_absolute_path",
         },
       },
       git_status = {
@@ -554,6 +627,8 @@ return {
       commands = {
         find_files_in_directory = find_files_in_directory,
         grep_in_directory = grep_in_directory,
+        copy_relative_path = copy_neotree_relative_path,
+        copy_absolute_path = copy_neotree_absolute_path,
       },
     },
   },

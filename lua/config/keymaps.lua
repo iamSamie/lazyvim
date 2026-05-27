@@ -163,6 +163,15 @@ vim.keymap.set("n", "<D-C-c>a", function()
   vim.notify("Copied path: " .. file)
 end, { desc = "Copy Absolute File Path" })
 
+vim.keymap.set("n", "<leader>bh", "<cmd>BufferLineMovePrev<cr>", { desc = "Move Buffer Left" })
+vim.keymap.set("n", "<leader>bl", "<cmd>BufferLineMoveNext<cr>", { desc = "Move Buffer Right" })
+vim.keymap.set("n", "<leader>bc", function()
+  Snacks.bufdelete()
+end, { desc = "Close Current Buffer" })
+
+vim.keymap.set("c", "<Tab>", "<C-n>", { desc = "Next Cmdline Suggestion" })
+vim.keymap.set("c", "<S-Tab>", "<C-p>", { desc = "Previous Cmdline Suggestion" })
+
 vim.keymap.set("n", "<D-/>", "gcc", { desc = "Comment Line", remap = true })
 vim.keymap.set("x", "<D-/>", "gc", { desc = "Comment Selection", remap = true })
 vim.keymap.set("n", "<D-j>", "<cmd>move .+1<cr>==", { desc = "Move Line Down" })
