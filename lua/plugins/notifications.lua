@@ -13,9 +13,34 @@ return {
           enabled = false,
         },
       },
+      cmdline = {
+        format = {
+          search_down = {
+            view = "search_popup_top",
+          },
+          search_up = {
+            view = "search_popup_top",
+          },
+        },
+      },
       views = {
         mini = {
           timeout = 7000,
+        },
+        search_popup_top = {
+          backend = "popup",
+          relative = "editor",
+          position = {
+            row = 2,
+            col = "60%",
+          },
+          size = {
+            width = "60%",
+            height = "auto",
+          },
+          border = {
+            style = "rounded",
+          },
         },
       },
     },

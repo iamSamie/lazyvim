@@ -12,6 +12,10 @@ vim.opt.directory = swap_directory .. "//"
 
 vim.opt.number = true
 vim.opt.relativenumber = false
+vim.opt.hlsearch = true
+vim.opt.incsearch = true
+vim.opt.ignorecase = true
+vim.opt.smartcase = true
 
 -- Avoid horizontal scrolling in regular buffers.
 vim.opt.wrap = true

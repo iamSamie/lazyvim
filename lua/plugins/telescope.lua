@@ -473,9 +473,7 @@ return {
       },
       {
         "<leader>f/",
-        function()
-          require("telescope.builtin").current_buffer_fuzzy_find()
-        end,
+        "/",
         desc = "Search In Current Buffer",
       },
       {

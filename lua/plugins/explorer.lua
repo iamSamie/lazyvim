@@ -514,6 +514,9 @@ return {
 
       opts.picker = opts.picker or {}
       opts.picker.sources = opts.picker.sources or {}
+      opts.picker.sources.grep = vim.tbl_deep_extend("force", opts.picker.sources.grep or {}, {
+        on_change = set_picker_preview_relative_file_path,
+      })
       opts.picker.sources.lsp_references = vim.tbl_deep_extend("force", opts.picker.sources.lsp_references or {}, {
         on_change = set_picker_preview_relative_file_path,
       })
