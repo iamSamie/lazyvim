@@ -71,6 +71,8 @@ return {
     opts = {
       options = {
         always_show_bufferline = true,
+        separator_style = "slant",
+        show_buffer_close_icons = true,
         custom_filter = function(buffer_number)
           local buffer_name = vim.api.nvim_buf_get_name(buffer_number)
 
