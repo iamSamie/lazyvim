@@ -148,16 +148,22 @@ local is_session_restoring = false
 local function get_non_neotree_target_window()
   local current_window = vim.api.nvim_get_current_win()
   local current_buffer = vim.api.nvim_win_get_buf(current_window)
+  local current_buffer_name = vim.api.nvim_buf_get_name(current_buffer)
 
-  if vim.bo[current_buffer].filetype ~= "neo-tree" then
+  if vim.bo[current_buffer].filetype ~= "neo-tree" and not vim.startswith(current_buffer_name, "git://HEAD/") then
     return current_window
   end
 
   for _, window_number in ipairs(vim.api.nvim_list_wins()) do
     local window_buffer = vim.api.nvim_win_get_buf(window_number)
+    local window_buffer_name = vim.api.nvim_buf_get_name(window_buffer)
     local is_floating_window = vim.api.nvim_win_get_config(window_number).relative ~= ""
 
-    if not is_floating_window and vim.bo[window_buffer].filetype ~= "neo-tree" then
+    if
+      not is_floating_window
+      and vim.bo[window_buffer].filetype ~= "neo-tree"
+      and not vim.startswith(window_buffer_name, "git://HEAD/")
+    then
       return window_number
     end
   end
@@ -624,6 +630,7 @@ return {
           mappings = {
             ["<cr>"] = "open_git_diff",
             ["l"] = "open_git_diff",
+            ["ß"] = "open",
           },
         },
       },
