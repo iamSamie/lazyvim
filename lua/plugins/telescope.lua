@@ -2,9 +2,10 @@ local repository_status_namespace = vim.api.nvim_create_namespace("repository_st
 local directory_search_memory_key = "directory_search_path"
 
 local function set_repository_status_highlights()
-  vim.api.nvim_set_hl(0, "RepositoryStatusChanges", { fg = "#e0af68" })
-  vim.api.nvim_set_hl(0, "RepositoryStatusAhead", { fg = "#9ece6a" })
-  vim.api.nvim_set_hl(0, "RepositoryStatusBehind", { fg = "#7dcfff" })
+  vim.api.nvim_set_hl(0, "RepositoryStatusModified", { fg = "#e0af68" })
+  vim.api.nvim_set_hl(0, "RepositoryStatusConflict", { fg = "#f7768e" })
+  vim.api.nvim_set_hl(0, "RepositoryStatusAhead", { bold = true, fg = "#73daca" })
+  vim.api.nvim_set_hl(0, "RepositoryStatusBehind", { bold = true, fg = "#7aa2f7" })
   vim.api.nvim_set_hl(0, "RepositoryStatusNoUpstream", { fg = "#f7768e" })
 end
 
@@ -39,7 +40,7 @@ local function get_git_branch(directory_path)
   return git_output
 end
 
-local function has_git_changes(directory_path)
+local function get_git_file_status_counts(directory_path)
   local git_output = vim.fn.systemlist({
     "git",
     "-C",
@@ -48,7 +49,39 @@ local function has_git_changes(directory_path)
     "--porcelain",
   })
 
-  return vim.v.shell_error == 0 and #git_output > 0
+  if vim.v.shell_error ~= 0 then
+    return {
+      conflict_count = 0,
+      modified_count = 0,
+    }
+  end
+
+  local modified_count = 0
+  local conflict_count = 0
+  local conflict_statuses = {
+    AA = true,
+    AU = true,
+    DD = true,
+    DU = true,
+    UA = true,
+    UD = true,
+    UU = true,
+  }
+
+  for _, status_line in ipairs(git_output) do
+    local file_status = status_line:sub(1, 2)
+
+    if conflict_statuses[file_status] then
+      conflict_count = conflict_count + 1
+    else
+      modified_count = modified_count + 1
+    end
+  end
+
+  return {
+    conflict_count = conflict_count,
+    modified_count = modified_count,
+  }
 end
 
 local function has_git_upstream(directory_path)
@@ -202,10 +235,15 @@ end
 
 local function get_repository_status(directory_path)
   local sync_status = get_git_sync_status(directory_path)
+  local file_status_counts = get_git_file_status_counts(directory_path)
   local status_parts = {}
 
-  if has_git_changes(directory_path) then
-    table.insert(status_parts, "●")
+  if file_status_counts.modified_count > 0 then
+    table.insert(status_parts, "M" .. file_status_counts.modified_count)
+  end
+
+  if file_status_counts.conflict_count > 0 then
+    table.insert(status_parts, "C" .. file_status_counts.conflict_count)
   end
 
   if sync_status.ahead_count > 0 then
@@ -277,13 +315,16 @@ local function apply_repository_status_highlights(buffer_number, repositories)
   for repository_index, repository in ipairs(repositories) do
     if repository.status ~= "" then
       local repository_prefix = string.format("%d. %s [%s] ", repository_index, repository.name, repository.branch)
+      local repository_line = repository_prefix .. repository.status
       local status_column = vim.fn.strchars(repository_prefix)
 
       for status_part in repository.status:gmatch("%S+") do
         local status_highlight = nil
 
-        if status_part == "●" then
-          status_highlight = "RepositoryStatusChanges"
+        if status_part:match("^M%d+$") then
+          status_highlight = "RepositoryStatusModified"
+        elseif status_part:match("^C%d+$") then
+          status_highlight = "RepositoryStatusConflict"
         elseif vim.startswith(status_part, "↑") then
           status_highlight = "RepositoryStatusAhead"
         elseif vim.startswith(status_part, "↓") then
@@ -293,13 +334,16 @@ local function apply_repository_status_highlights(buffer_number, repositories)
         end
 
         if status_highlight then
+          local start_byte_column = vim.str_byteindex(repository_line, status_column)
+          local end_byte_column = vim.str_byteindex(repository_line, status_column + vim.fn.strchars(status_part))
+
           vim.api.nvim_buf_add_highlight(
             buffer_number,
             repository_status_namespace,
             status_highlight,
             repository_index - 1,
-            status_column,
-            status_column + vim.fn.strchars(status_part)
+            start_byte_column,
+            end_byte_column
           )
         end
 
@@ -520,9 +564,9 @@ return {
         desc = "Grep in Directory",
       },
       {
-        "<leader>fG",
+        "<leader>gR",
         open_repositories_popup,
-        desc = "Repositories",
+        desc = "Git Repositories",
       },
     },
     opts = function()
