@@ -24,6 +24,15 @@ return {
         documentation_options.default_implementation()
 
         local documentation_buffer = documentation_options.window:get_buf()
+
+        if not vim.api.nvim_buf_is_valid(documentation_buffer) then
+          return
+        end
+
+        if not vim.bo[documentation_buffer].modifiable then
+          return
+        end
+
         local documentation_lines = vim.api.nvim_buf_get_lines(documentation_buffer, 0, -1, false)
         local horizontal_padding = string.rep(" ", documentation_padding)
         local padded_documentation_lines = {}
