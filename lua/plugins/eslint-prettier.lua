@@ -5,6 +5,7 @@ return {
       opts.ensure_installed = opts.ensure_installed or {}
 
       local tool_names = {
+        "eslint_d",
         "eslint-lsp",
         "prettier",
       }
@@ -13,6 +14,23 @@ return {
         if not vim.tbl_contains(opts.ensure_installed, tool_name) then
           table.insert(opts.ensure_installed, tool_name)
         end
+      end
+    end,
+  },
+  {
+    "stevearc/conform.nvim",
+    opts = function(_, opts)
+      opts.formatters_by_ft = opts.formatters_by_ft or {}
+
+      local filetype_names = {
+        "javascript",
+        "javascriptreact",
+        "typescript",
+        "typescriptreact",
+      }
+
+      for _, filetype_name in ipairs(filetype_names) do
+        opts.formatters_by_ft[filetype_name] = { "eslint_d", "prettier" }
       end
     end,
   },
