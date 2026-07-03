@@ -44,7 +44,7 @@ return {
           min_severity = vim.diagnostic.severity.HINT,
         },
         gitsigns = {
-          enable = false,
+          enable = true,
           signs = {
             add = "▏",
             change = "▏",
@@ -66,6 +66,25 @@ return {
       vim.api.nvim_create_autocmd("ColorScheme", {
         group = vim.api.nvim_create_augroup("user_satellite_highlights", { clear = true }),
         callback = set_satellite_highlights,
+      })
+
+      vim.api.nvim_create_autocmd("DiagnosticChanged", {
+        group = vim.api.nvim_create_augroup("user_satellite_refresh_diagnostics", { clear = true }),
+        callback = function()
+          vim.schedule(function()
+            vim.cmd("SatelliteRefresh")
+          end)
+        end,
+      })
+
+      vim.api.nvim_create_autocmd("User", {
+        group = vim.api.nvim_create_augroup("user_satellite_refresh_gitsigns", { clear = true }),
+        pattern = "GitSignsUpdate",
+        callback = function()
+          vim.schedule(function()
+            vim.cmd("SatelliteRefresh")
+          end)
+        end,
       })
     end,
   },

@@ -68,7 +68,7 @@ return {
         end
       end
 
-      vim.api.nvim_create_autocmd({ "BufReadPost", "BufNewFile", "BufWritePost" }, {
+      vim.api.nvim_create_autocmd({ "BufFilePost", "BufRead", "BufNewFile", "BufWritePost" }, {
         group = vim.api.nvim_create_augroup("user_gitsigns_attach", { clear = true }),
         callback = function(event)
           local buffer_number = event.buf
