@@ -4,6 +4,7 @@
 
 vim.g.lazyvim_explorer = "neo-tree"
 vim.g.autoformat = true
+vim.opt.undofile = false
 
 local temporary_directory = vim.uv.os_tmpdir()
 local swap_directory = vim.fs.joinpath(temporary_directory, "nvim-swap")
